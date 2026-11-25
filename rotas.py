@@ -2,6 +2,8 @@ import sqlite3
 
 from flask import Blueprint, request, url_for
 
+from autenticacao import auth, pode_acessar
+
 from core.banco import BancoSQLite
 from model.dao import AlunoDAO, DisciplinaDAO, MatriculaDAO
 from model.dominio import Aluno
@@ -47,6 +49,7 @@ def inicio():
 
 
 @api.get("/alunos")
+@auth.login_required(role="admin")
 def listar_alunos():
     dao = AlunoDAO()
     curso = request.args.get("curso")
@@ -54,7 +57,10 @@ def listar_alunos():
 
 
 @api.get("/alunos/<int:nusp>")
+@auth.login_required
 def buscar_aluno(nusp):
+    if not pode_acessar(nusp):
+        return {"erro": "Acesso proibido"}, 403
     aluno = AlunoDAO().buscar(nusp)
     if aluno is None:
         return {"erro": "Aluno não encontrado"}, 404
@@ -62,6 +68,7 @@ def buscar_aluno(nusp):
 
 
 @api.post("/alunos")
+@auth.login_required(role="admin")
 def criar_aluno():
     aluno, erro = _validar_aluno(request.get_json(silent=True))
     if erro:
@@ -79,6 +86,7 @@ def criar_aluno():
 
 
 @api.put("/alunos/<int:nusp>")
+@auth.login_required(role="admin")
 def atualizar_aluno(nusp):
     aluno, erro = _validar_aluno(request.get_json(silent=True), nusp_url=nusp)
     if erro:
@@ -89,6 +97,7 @@ def atualizar_aluno(nusp):
 
 
 @api.delete("/alunos/<int:nusp>")
+@auth.login_required(role="admin")
 def excluir_aluno(nusp):
     try:
         removidos = AlunoDAO().excluir(nusp)
@@ -101,18 +110,25 @@ def excluir_aluno(nusp):
 
 
 @api.get("/disciplinas")
+@auth.login_required
 def listar_disciplinas():
     return [d.to_dict() for d in DisciplinaDAO().listar()]
 
 
 @api.get("/matriculas")
+@auth.login_required
 def listar_matriculas():
-    return [m.to_dict() for m in MatriculaDAO().listar()]
+    usuario = auth.current_user()
+    nusp = None if usuario.perfil == "admin" else usuario.aluno_id
+    return [m.to_dict() for m in MatriculaDAO().listar(nusp)]
 
 
 @api.get("/matriculas/<int:id_matricula>")
+@auth.login_required
 def buscar_matricula(id_matricula):
-    m = MatriculaDAO().buscar(id_matricula)
+    usuario = auth.current_user()
+    nusp = None if usuario.perfil == "admin" else usuario.aluno_id
+    m = MatriculaDAO().buscar(id_matricula, nusp)
     if m is None:
         return {"erro": "Matrícula não encontrada"}, 404
     return m.to_dict(), 200

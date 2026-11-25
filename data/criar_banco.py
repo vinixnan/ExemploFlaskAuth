@@ -4,12 +4,15 @@ from model.modelos import (
     AlunoORM,
     DisciplinaORM,
     MatriculaORM,
+    UsuarioORM,
 )
 
 
 def criar_tabelas():
     with banco_peewee:
-        banco_peewee.create_tables([AlunoORM, DisciplinaORM, MatriculaORM], safe=True)
+        banco_peewee.create_tables(
+            [AlunoORM, DisciplinaORM, MatriculaORM, UsuarioORM], safe=True
+        )
     print(f"Tabelas criadas em: {ARQUIVO_BANCO}")
 
 

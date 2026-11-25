@@ -208,13 +208,20 @@ class MatriculaDAO:
         )
 
     @banco_peewee.connection_context()
-    def listar(self):
+    def listar(self, nusp=None):
         consulta = MatriculaORM.select().order_by(MatriculaORM.id_matricula)
+        if nusp is not None:
+            consulta = consulta.where(MatriculaORM.aluno == nusp)
         return [self._converter(m) for m in consulta]
 
     @banco_peewee.connection_context()
-    def buscar(self, id_matricula):
-        matricula = MatriculaORM.get_or_none(MatriculaORM.id_matricula == id_matricula)
+    def buscar(self, id_matricula, nusp=None):
+        consulta = MatriculaORM.select().where(
+            MatriculaORM.id_matricula == id_matricula
+        )
+        if nusp is not None:
+            consulta = consulta.where(MatriculaORM.aluno == nusp)
+        matricula = consulta.first()
         return None if matricula is None else self._converter(matricula)
 
     @banco_peewee.connection_context()

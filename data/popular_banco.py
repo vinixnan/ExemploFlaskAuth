@@ -1,5 +1,7 @@
 from model.dao import AlunoDAO, DisciplinaDAO, MatriculaDAO
 from model.dominio import Aluno, Disciplina, Matricula
+from model.modelos import AlunoORM, UsuarioORM, banco_peewee
+from werkzeug.security import generate_password_hash
 from faker import Faker
 import random
 
@@ -75,7 +77,13 @@ def popular_banco():
     matricula_dao = MatriculaDAO()
 
     alunos, disciplinas, matriculas = gerar_dados(N_ALUNOS)
-    inseridos = {"alunos": 0, "disciplinas": 0, "matriculas": 0}
+
+    inseridos = {
+        "alunos": 0,
+        "disciplinas": 0,
+        "matriculas": 0,
+        "usuarios": 0,
+    }
 
     for disciplina in disciplinas:
         if disciplina_dao.buscar(disciplina.codigo) is None:
@@ -92,6 +100,34 @@ def popular_banco():
             matricula_dao.inserir(matricula)
             inseridos["matriculas"] += 1
 
+    # Criação dos usuários
+    with banco_peewee:
+
+        # Administrador
+        if UsuarioORM.get_or_none(UsuarioORM.login == "admin") is None:
+            UsuarioORM.create(
+                login="admin",
+                senha_hash=generate_password_hash("1234"),
+                perfil="admin",
+                aluno=None,
+            )
+            inseridos["usuarios"] += 1
+
+        # Usuários dos alunos
+        for aluno in AlunoORM.select():
+            login = str(aluno.nusp)
+
+            if UsuarioORM.get_or_none(UsuarioORM.login == login) is None:
+                UsuarioORM.create(
+                    login=login,
+                    senha_hash=generate_password_hash(login),
+                    perfil="aluno",
+                    aluno=aluno,
+                )
+                inseridos["usuarios"] += 1
+
+        total_usuarios = UsuarioORM.select().count()
+
     print("Registros adicionados:", inseridos)
     print(
         "Total no banco:",
@@ -99,6 +135,7 @@ def popular_banco():
             "alunos": aluno_dao.contar(),
             "disciplinas": len(disciplina_dao.listar()),
             "matriculas": len(matricula_dao.listar()),
+            "usuarios": total_usuarios,
         },
     )
 

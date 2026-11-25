@@ -49,3 +49,15 @@ class MatriculaORM(ModeloBase):
 
     class Meta:
         table_name = "matriculas"
+
+
+class UsuarioORM(ModeloBase):
+    login = TextField(primary_key=True)
+    senha_hash = TextField()
+    perfil = TextField(default="aluno")
+    aluno = ForeignKeyField(
+        AlunoORM, null=True, unique=True, column_name="nusp", on_delete="CASCADE"
+    )
+
+    class Meta:
+        table_name = "usuarios"
